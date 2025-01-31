@@ -708,6 +708,8 @@ dependencies = [
  "crossterm",
  "phoenix_channels_client",
  "ratatui",
+ "tokio",
+ "url",
 ]
 
 [[package]]
