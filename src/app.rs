@@ -8,6 +8,7 @@ mod phoenix_screen;
 mod projects_screen;
 mod todos_screen;
 
+use super::tui::TUIAction;
 use main_screen::MainScreen;
 use notes_screen::NotesScreen;
 use phoenix_screen::PhoenixScreen;
@@ -28,6 +29,7 @@ pub enum Screens {
 
 pub enum AppActions {
     ChangeScreen(Screens),
+    Quit,
 }
 
 impl Screens {
@@ -62,11 +64,15 @@ impl App {
         self.screen.render(f);
     }
 
-    pub fn handle_key(&mut self, key: KeyEvent) {
+    pub fn handle_key(&mut self, key: KeyEvent) -> Option<TUIAction> {
         let key_response = self.screen.handle_key(key);
         match key_response {
-            Some(AppActions::ChangeScreen(screen)) => self.change_screen(screen),
-            None => {}
+            Some(AppActions::ChangeScreen(screen)) => {
+                self.change_screen(screen);
+                None
+            }
+            Some(AppActions::Quit) => Some(TUIAction::Quit),
+            None => None,
         }
     }
 

@@ -1,5 +1,9 @@
-use crossterm::event::KeyEvent;
-use ratatui::Frame;
+use crossterm::event::{KeyCode, KeyEvent};
+use ratatui::{
+    style::{Color, Style},
+    widgets::{Block, BorderType, Borders},
+    Frame,
+};
 
 use super::AppActions;
 
@@ -10,9 +14,20 @@ impl ProjectsScreen {
         Self {}
     }
 
-    pub fn render(&mut self, f: &mut Frame) {}
+    pub fn render(&mut self, f: &mut Frame) {
+        let block = Block::new()
+            .border_type(BorderType::Rounded)
+            .borders(Borders::LEFT | Borders::RIGHT)
+            .border_style(Style::default().fg(Color::White))
+            .style(Style::default().bg(Color::Black))
+            .title("Projects Screen");
+        f.render_widget(block, f.area());
+    }
 
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
-        None
+        match e.code {
+            KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
+            _ => None,
+        }
     }
 }

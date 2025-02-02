@@ -19,4 +19,4 @@ Learning:
 - serde?
 - ratatui
 
-ratatui i can work with mocks for now
+`App` can be used as a central state handling while each `Screens` can work on their own state.

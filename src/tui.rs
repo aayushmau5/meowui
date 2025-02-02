@@ -14,6 +14,10 @@ pub struct TUI {
     terminal: Term,
 }
 
+pub enum TUIAction {
+    Quit,
+}
+
 impl TUI {
     pub fn new() -> Self {
         if let Ok(terminal) = Self::setup_terminal() {
@@ -49,13 +53,17 @@ impl TUI {
         loop {
             self.terminal.draw(|f| app.render(f))?;
             if let Event::Key(e) = event::read()? {
-                match e {
+                let response = match e {
                     KeyEvent {
                         code: KeyCode::Char('c'),
                         modifiers: KeyModifiers::CONTROL,
                         ..
-                    } => break Ok(()),
+                    } => Some(TUIAction::Quit),
                     e => app.handle_key(e),
+                };
+                match response {
+                    Some(TUIAction::Quit) => break Ok(()),
+                    None => {}
                 }
             }
         }
