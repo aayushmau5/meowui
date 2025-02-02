@@ -1,4 +1,4 @@
-use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -25,7 +25,7 @@ impl TUI {
 
     pub fn run(&mut self, app: App) -> Result<(), std::io::Error> {
         Self::init()?;
-        self.event_loop(app)?;
+        self.event_loop(app)?; // TODO: call done() on error as well
         Self::done()?;
         Ok(())
     }
@@ -45,13 +45,17 @@ impl TUI {
         disable_raw_mode()
     }
 
-    fn event_loop(&mut self, app: App) -> Result<(), std::io::Error> {
+    fn event_loop(&mut self, mut app: App) -> Result<(), std::io::Error> {
         loop {
             self.terminal.draw(|f| app.render(f))?;
             if let Event::Key(e) = event::read()? {
-                match (e.code, e.modifiers) {
-                    (KeyCode::Char('c'), KeyModifiers::CONTROL) => break Ok(()),
-                    _ => {}
+                match e {
+                    KeyEvent {
+                        code: KeyCode::Char('c'),
+                        modifiers: KeyModifiers::CONTROL,
+                        ..
+                    } => break Ok(()),
+                    e => app.handle_key(e),
                 }
             }
         }
