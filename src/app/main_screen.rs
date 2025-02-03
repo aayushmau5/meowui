@@ -42,7 +42,7 @@ impl MainScreen {
     pub fn new() -> Self {
         Self {
             list_items: Menu::items(),
-            list_state: ListState::default(),
+            list_state: ListState::default().with_selected(Some(0)),
         }
     }
 

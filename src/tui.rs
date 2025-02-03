@@ -69,6 +69,3 @@ impl TUI {
         }
     }
 }
-
-// reading, handling key events, quitting
-// rendering ui

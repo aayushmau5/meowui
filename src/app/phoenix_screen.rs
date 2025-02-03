@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
 };
 
-use super::{main_screen::MainScreen, AppActions, AppActions::ChangeScreen, Screens::Main};
+use super::{main_screen::MainScreen, AppActions, Screens};
 
 pub struct PhoenixScreen {}
 
@@ -27,7 +27,7 @@ impl PhoenixScreen {
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
         match e.code {
             KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
-            KeyCode::Char('b') => Some(ChangeScreen(Main(MainScreen::new()))),
+            KeyCode::Char('b') => Some(AppActions::ChangeScreen(Screens::Main(MainScreen::new()))),
             _ => None,
         }
     }
