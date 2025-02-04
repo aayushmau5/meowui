@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 ratatui = "0.29.0"
-phoenix_channels_client = { version = "0.1" }
+phoenix_channels_client = { git = "https://github.com/liveview-native/phoenix-channels-client.git"}
 crossterm = "0.28.1"
 color-eyre = "0.6"
 url = "2.5.4"
-tokio = "1.43.0"
+tokio = {version = "1.43.0", features = ["full"]}
