@@ -8,6 +8,8 @@ mod phoenix_screen;
 mod projects_screen;
 mod todos_screen;
 
+use crate::phoenix::Phoenix;
+
 use super::tui::TUIAction;
 use main_screen::MainScreen;
 use notes_screen::NotesScreen;
@@ -15,8 +17,9 @@ use phoenix_screen::PhoenixScreen;
 use projects_screen::ProjectsScreen;
 use todos_screen::TodosScreen;
 
-pub struct App {
+pub struct App<'a> {
     pub screen: Screens,
+    pub socket: &'a Phoenix,
 }
 
 pub enum Screens {
@@ -53,10 +56,11 @@ impl Screens {
     }
 }
 
-impl App {
-    pub fn new() -> Self {
+impl<'a> App<'a> {
+    pub fn new(socket: &'a Phoenix) -> Self {
         Self {
             screen: Screens::Main(MainScreen::new()),
+            socket,
         }
     }
 
@@ -79,4 +83,7 @@ impl App {
     pub fn change_screen(&mut self, screen: Screens) {
         self.screen = screen;
     }
+
+    pub async fn send_to_channel() {}
+    pub async fn get_from_channel() {}
 }
