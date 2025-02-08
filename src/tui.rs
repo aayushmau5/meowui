@@ -30,8 +30,7 @@ impl TUI {
     pub fn run(&mut self, app: App) -> Result<(), std::io::Error> {
         Self::init()?;
         self.event_loop(app)?; // TODO: call done() on error as well
-        Self::done()?;
-        Ok(())
+        Self::done()
     }
 
     fn setup_terminal() -> Result<Term, std::io::Error> {
