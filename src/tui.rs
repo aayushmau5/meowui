@@ -50,6 +50,7 @@ impl TUI {
 
     fn event_loop(&mut self, mut app: App) -> Result<(), std::io::Error> {
         loop {
+            app.receive_socket_events();
             self.terminal.draw(|f| app.render(f))?;
             if let Event::Key(e) = event::read()? {
                 let response = match e {

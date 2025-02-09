@@ -1,3 +1,7 @@
+use cli_log::info;
+use tokio::sync::broadcast::Receiver;
+use tokio::sync::mpsc::Sender;
+
 use crossterm::event::KeyEvent;
 use ratatui::Frame;
 
@@ -17,6 +21,8 @@ use todos_screen::TodosScreen;
 
 pub struct App {
     pub screen: Screens,
+    pub socket_receiver: Receiver<String>,
+    pub screen_sender: Sender<String>,
 }
 
 pub enum Screens {
@@ -54,9 +60,11 @@ impl Screens {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(socket_receiver: Receiver<String>, screen_sender: Sender<String>) -> Self {
         Self {
             screen: Screens::Main(MainScreen::new()),
+            socket_receiver,
+            screen_sender,
         }
     }
 
@@ -78,5 +86,23 @@ impl App {
 
     pub fn change_screen(&mut self, screen: Screens) {
         self.screen = screen;
+    }
+
+    fn handle_event(&self, event: String) {
+        info!("{event}");
+        self.push_event();
+    }
+
+    pub fn receive_socket_events(&mut self) {
+        if let Ok(event) = self.socket_receiver.try_recv() {
+            self.handle_event(event);
+        }
+    }
+
+    fn push_event(&self) {
+        match self.screen_sender.try_send("HELLO WORLD".to_string()) {
+            Ok(()) => info!("sent message"),
+            Err(e) => info!("{e}"),
+        }
     }
 }

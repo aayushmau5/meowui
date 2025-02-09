@@ -1,3 +1,4 @@
+use cli_log::info;
 use phoenix_channels_client::{Channel, Socket, Topic};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::broadcast::Sender as BroadcastSender;
@@ -56,28 +57,27 @@ impl Phoenix {
         }
     }
 
-    pub async fn get_events(&self) {
-        let channel = self.channel.as_ref().unwrap();
+    pub async fn run(&mut self) -> JoinHandle<()> {
+        let channel = self.channel.as_ref().unwrap().clone();
+        let events = channel.events();
+
         loop {
-            let events = channel.events();
-            let event = events.event().await.unwrap();
-            dbg!(event);
-            // println!("events: {:?}", events.event());
+            tokio::select! {
+                _ = self.handle_screen_events() => {},
+
+                event = events.event() => {
+                    if let Ok(event) = event {
+                        let payload = event.payload.to_string();
+                        let _ = self.socket_tx.send(payload);
+                    }
+                }
+            }
         }
     }
 
-    pub async fn run(&mut self) -> JoinHandle<()> {
-        let (socket, channel) = (
-            self.socket.as_ref().unwrap(),
-            self.channel.as_ref().unwrap(),
-        );
-        let socket = socket.clone();
-        let channel = channel.clone();
-
-        loop {
-            let events = channel.events();
-            let event = events.event().await.unwrap();
-            // eprintln!("{event:?}");
-        }
+    pub async fn handle_screen_events(&mut self) {
+        if let Some(value) = self.screen_rx.recv().await {
+            info!("received {value}");
+        };
     }
 }
