@@ -15,7 +15,6 @@ https://github.com/ratatui/awesome-ratatui
 
 Learning:
 
-- tokio
 - serde?
 - ratatui
 

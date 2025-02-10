@@ -1,5 +1,5 @@
 use cli_log::info;
-use phoenix_channels_client::{Channel, Socket, Topic};
+use phoenix_channels_client::{Channel, Event, Payload, Socket, Topic};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::Receiver as ScreenReceiver;
@@ -21,7 +21,7 @@ impl Phoenix {
         screen_rx: ScreenReceiver<String>,
     ) -> Self {
         let url = Url::parse(url).unwrap();
-        // let socket = Socket::spawn(url, None).await.unwrap();
+
         Self {
             url,
             socket_tx,
@@ -36,7 +36,7 @@ impl Phoenix {
         if let Some(socket) = socket {
             socket.connect(Duration::from_secs(10)).await.unwrap();
             let channel = socket
-                .channel(Topic::from_string("user-join".to_string()), None)
+                .channel(Topic::from_string("blog:events".to_string()), None)
                 .await
                 .unwrap();
             channel.join(Duration::from_secs(10)).await.unwrap();
@@ -46,7 +46,7 @@ impl Phoenix {
     }
 
     pub async fn disassemble(&mut self) {
-        println!("Disassembled");
+        info!("Disassembled");
         if let Some(socket) = &self.socket {
             if let Some(channel) = &self.channel {
                 channel.leave().await.unwrap();
@@ -77,6 +77,28 @@ impl Phoenix {
 
     pub async fn handle_screen_events(&mut self) {
         if let Some(value) = self.screen_rx.recv().await {
+            if value == String::from("UPDATE_COUNT") {
+                if let Some(channel) = &self.channel {
+                    info!("Calling channel");
+                    let result = channel
+                        .call(
+                            Event::from_string("like".to_string()),
+                            Payload::json_from_serialized(
+                                "{\"topic\":\"blog:events\"}".to_string(),
+                            )
+                            .unwrap(),
+                            Duration::from_secs(10),
+                        )
+                        .await;
+                    match result {
+                        Ok(payload) => {
+                            info!("received from phoenix: {payload}");
+                            let _ = self.socket_tx.send(payload.to_string());
+                        }
+                        Err(e) => info!("error: {e}"),
+                    }
+                }
+            }
             info!("received {value}");
         };
     }

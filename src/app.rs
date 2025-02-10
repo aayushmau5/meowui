@@ -89,7 +89,7 @@ impl App {
     }
 
     fn handle_event(&self, event: String) {
-        info!("{event}");
+        info!("received on socket: {event}");
         self.push_event();
     }
 
@@ -100,7 +100,7 @@ impl App {
     }
 
     fn push_event(&self) {
-        match self.screen_sender.try_send("HELLO WORLD".to_string()) {
+        match self.screen_sender.try_send("UPDATE_COUNT".to_string()) {
             Ok(()) => info!("sent message"),
             Err(e) => info!("{e}"),
         }

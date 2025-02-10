@@ -9,7 +9,9 @@ use tui::TUI;
 
 #[tokio::main]
 async fn main() {
+    // TODO: enable this for dev mode only
     cli_log::init_cli_log!();
+
     let (socket_tx, socket_rx) = broadcast::channel::<String>(100);
     let (screen_tx, screen_rx) = mpsc::channel::<String>(100);
     let (signal_close_tx, mut signal_close_rx) = watch::channel(false);
