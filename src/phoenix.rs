@@ -1,5 +1,6 @@
 use cli_log::info;
 use phoenix_channels_client::{Channel, Event, Payload, Socket, Topic};
+use serde_json::json;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::sync::mpsc::Receiver as ScreenReceiver;
@@ -80,17 +81,17 @@ impl Phoenix {
             if value == String::from("UPDATE_COUNT") {
                 if let Some(channel) = &self.channel {
                     info!("Calling channel");
-                    let result = channel
+                    match channel
                         .call(
                             Event::from_string("like".to_string()),
                             Payload::json_from_serialized(
-                                "{\"topic\":\"blog:events\"}".to_string(),
+                                json!({"topic": "blog:events"}).to_string(),
                             )
                             .unwrap(),
                             Duration::from_secs(10),
                         )
-                        .await;
-                    match result {
+                        .await
+                    {
                         Ok(payload) => {
                             info!("received from phoenix: {payload}");
                             let _ = self.socket_tx.send(payload.to_string());
