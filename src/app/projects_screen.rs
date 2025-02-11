@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
 };
 
-use super::{main_screen::MainScreen, AppActions, Screens};
+use super::{AppActions, ScreenType};
 
 pub struct ProjectsScreen {}
 
@@ -27,8 +27,12 @@ impl ProjectsScreen {
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
         match e.code {
             KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
-            KeyCode::Char('b') => Some(AppActions::ChangeScreen(Screens::Main(MainScreen::new()))),
+            KeyCode::Char('b') => Some(AppActions::ChangeScreen(ScreenType::Main)),
             _ => None,
         }
+    }
+
+    pub fn handle_socket_event(&self, payload: String) {
+        println!("{payload}");
     }
 }

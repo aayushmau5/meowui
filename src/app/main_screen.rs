@@ -4,11 +4,7 @@ use ratatui::style::Style;
 use ratatui::widgets::{Block, List, ListItem, ListState};
 use ratatui::Frame;
 
-use super::notes_screen::NotesScreen;
-use super::phoenix_screen::PhoenixScreen;
-use super::projects_screen::ProjectsScreen;
-use super::todos_screen::TodosScreen;
-use super::{AppActions, Screens};
+use super::{AppActions, ScreenType};
 
 enum Menu {
     Todos,
@@ -88,10 +84,10 @@ impl MainScreen {
                 if let Some(i) = self.list_state.selected() {
                     let item = self.list_items[i];
                     let screen = match Menu::from_str(item)? {
-                        Menu::Notes => Screens::Notes(NotesScreen::new()),
-                        Menu::Phoenix => Screens::Phoenix(PhoenixScreen::new()),
-                        Menu::Todos => Screens::Todos(TodosScreen::new()),
-                        Menu::Projects => Screens::Projects(ProjectsScreen::new()),
+                        Menu::Notes => ScreenType::Notes,
+                        Menu::Phoenix => ScreenType::Phoenix,
+                        Menu::Todos => ScreenType::Todos,
+                        Menu::Projects => ScreenType::Projects,
                     };
                     Some(AppActions::ChangeScreen(screen))
                 } else {
@@ -119,5 +115,9 @@ impl MainScreen {
 
     fn select_last(&mut self) {
         self.list_state.select_last();
+    }
+
+    pub fn handle_socket_event(&self, payload: String) {
+        println!("{payload}");
     }
 }

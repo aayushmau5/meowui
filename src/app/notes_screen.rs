@@ -1,16 +1,22 @@
+use cli_log::info;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, BorderType, Borders},
     Frame,
 };
+use tokio::sync::mpsc::Sender;
 
-use super::{main_screen::MainScreen, AppActions, Screens};
-pub struct NotesScreen {}
+use super::{AppActions, ScreenType};
+pub struct NotesScreen {
+    pub screen_sender: Sender<String>,
+}
 
 impl NotesScreen {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(screen_sender: Sender<String>) -> Self {
+        let notes_screen = Self { screen_sender };
+        notes_screen.push_event();
+        notes_screen
     }
 
     pub fn render(&mut self, f: &mut Frame) {
@@ -26,8 +32,19 @@ impl NotesScreen {
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
         match e.code {
             KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
-            KeyCode::Char('b') => Some(AppActions::ChangeScreen(Screens::Main(MainScreen::new()))),
+            KeyCode::Char('b') => Some(AppActions::ChangeScreen(ScreenType::Main)),
             _ => None,
+        }
+    }
+
+    pub fn handle_socket_event(&self, payload: String) {
+        println!("{payload}");
+    }
+
+    fn push_event(&self) {
+        match self.screen_sender.try_send("UPDATE_COUNT".to_string()) {
+            Ok(()) => info!("sent message"),
+            Err(e) => info!("{e}"),
         }
     }
 }
