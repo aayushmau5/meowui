@@ -1,3 +1,4 @@
+use crate::phoenix::event::PhoenixEvent;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Color, Style},
@@ -31,7 +32,7 @@ impl TodosScreen {
         }
     }
 
-    pub fn handle_socket_event(&self, payload: String) {
+    pub fn handle_socket_event(&self, payload: PhoenixEvent) {
         println!("{payload}");
     }
 }

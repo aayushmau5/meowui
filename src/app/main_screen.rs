@@ -1,10 +1,10 @@
+use super::{AppActions, ScreenType};
+use crate::phoenix::event::PhoenixEvent;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::Stylize;
 use ratatui::style::Style;
 use ratatui::widgets::{Block, List, ListItem, ListState};
 use ratatui::Frame;
-
-use super::{AppActions, ScreenType};
 
 enum Menu {
     Todos,
@@ -117,7 +117,7 @@ impl MainScreen {
         self.list_state.select_last();
     }
 
-    pub fn handle_socket_event(&self, payload: String) {
+    pub fn handle_socket_event(&self, payload: PhoenixEvent) {
         println!("{payload}");
     }
 }

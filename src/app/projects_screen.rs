@@ -1,11 +1,11 @@
+use super::{AppActions, ScreenType};
+use crate::phoenix::event::PhoenixEvent;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, BorderType, Borders},
     Frame,
 };
-
-use super::{AppActions, ScreenType};
 
 pub struct ProjectsScreen {}
 
@@ -32,7 +32,7 @@ impl ProjectsScreen {
         }
     }
 
-    pub fn handle_socket_event(&self, payload: String) {
+    pub fn handle_socket_event(&self, payload: PhoenixEvent) {
         println!("{payload}");
     }
 }

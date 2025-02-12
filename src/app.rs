@@ -1,9 +1,3 @@
-use tokio::sync::broadcast::Receiver;
-use tokio::sync::mpsc::Sender;
-
-use crossterm::event::KeyEvent;
-use ratatui::Frame;
-
 // Screens
 mod main_screen;
 mod notes_screen;
@@ -12,16 +6,20 @@ mod projects_screen;
 mod todos_screen;
 
 use super::tui::TUIAction;
+use crate::phoenix::event::PhoenixEvent;
+use crossterm::event::KeyEvent;
 use main_screen::MainScreen;
 use notes_screen::NotesScreen;
 use phoenix_screen::PhoenixScreen;
 use projects_screen::ProjectsScreen;
+use ratatui::Frame;
 use todos_screen::TodosScreen;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct App {
     pub screen: Screens,
-    pub socket_receiver: Receiver<String>,
-    pub screen_sender: Sender<String>,
+    pub socket_receiver: Receiver<PhoenixEvent>,
+    pub screen_sender: Sender<PhoenixEvent>,
 }
 
 pub enum ScreenType {
@@ -66,7 +64,7 @@ impl Screens {
         }
     }
 
-    fn handle_socket_event(&mut self, payload: String) {
+    fn handle_socket_event(&mut self, payload: PhoenixEvent) {
         match self {
             Screens::Main(main_screen) => main_screen.handle_socket_event(payload),
             Screens::Todos(todos_screen) => todos_screen.handle_socket_event(payload),
@@ -78,7 +76,10 @@ impl Screens {
 }
 
 impl App {
-    pub fn new(socket_receiver: Receiver<String>, screen_sender: Sender<String>) -> Self {
+    pub fn new(
+        socket_receiver: Receiver<PhoenixEvent>,
+        screen_sender: Sender<PhoenixEvent>,
+    ) -> Self {
         Self {
             screen: Screens::Main(MainScreen::new()),
             socket_receiver,

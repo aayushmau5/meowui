@@ -1,3 +1,5 @@
+use super::{AppActions, ScreenType};
+use crate::phoenix::event::PhoenixEvent;
 use cli_log::info;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -7,13 +9,12 @@ use ratatui::{
 };
 use tokio::sync::mpsc::Sender;
 
-use super::{AppActions, ScreenType};
 pub struct NotesScreen {
-    pub screen_sender: Sender<String>,
+    pub screen_sender: Sender<PhoenixEvent>,
 }
 
 impl NotesScreen {
-    pub fn new(screen_sender: Sender<String>) -> Self {
+    pub fn new(screen_sender: Sender<PhoenixEvent>) -> Self {
         let notes_screen = Self { screen_sender };
         notes_screen.push_event();
         notes_screen
@@ -37,12 +38,15 @@ impl NotesScreen {
         }
     }
 
-    pub fn handle_socket_event(&self, payload: String) {
+    pub fn handle_socket_event(&self, payload: PhoenixEvent) {
         println!("{payload}");
     }
 
     fn push_event(&self) {
-        match self.screen_sender.try_send("UPDATE_COUNT".to_string()) {
+        match self.screen_sender.try_send(PhoenixEvent {
+            from: "notes".to_string(),
+            payload: None,
+        }) {
             Ok(()) => info!("sent message"),
             Err(e) => info!("{e}"),
         }

@@ -13,4 +13,8 @@ Connecting to my phoenix backend.
 
 https://github.com/ratatui/awesome-ratatui
 
+https://hexdocs.pm/phoenix/Phoenix.Token.html
+
 `App` can be used as a central state handling while each `Screens` can work on their own state.
+
+Event Schema: from: string, payload: Option<JSONPayload>
