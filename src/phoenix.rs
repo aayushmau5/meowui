@@ -96,8 +96,7 @@ impl Phoenix {
                     .await
                 {
                     Ok(payload) => {
-                        info!("received from phoenix: {payload}");
-                        let _ = self.socket_tx.send(payload.into());
+                        let _ = self.socket_tx.send(payload.into()).await;
                     }
                     Err(e) => info!("error: {e}"),
                 }

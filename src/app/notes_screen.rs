@@ -7,7 +7,15 @@ use ratatui::{
     widgets::{Block, BorderType, Borders},
     Frame,
 };
+use serde_json::json;
 use tokio::sync::mpsc::Sender;
+
+/// ## Events
+///
+/// ### Get Workspaces
+/// screen -> socket: `{"name": "notes", "payload": {"action": "get-workspaces"}}`
+///
+/// socket -> screen: `{"name": "notes", "payload": {"action": "get-workspaces", "data": [...]}}`
 
 pub struct NotesScreen {
     pub screen_sender: Sender<PhoenixEvent>,
@@ -45,7 +53,7 @@ impl NotesScreen {
     fn push_event(&self) {
         match self.screen_sender.try_send(PhoenixEvent {
             name: "notes".to_string(),
-            payload: None,
+            payload: Some(json!({"action": "get-all"})),
         }) {
             Ok(()) => info!("sent message"),
             Err(e) => info!("{e}"),

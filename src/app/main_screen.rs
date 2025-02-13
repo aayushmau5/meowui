@@ -9,7 +9,7 @@ use ratatui::Frame;
 enum Menu {
     Todos,
     Notes,
-    Phoenix,
+    Bin,
     Projects,
 }
 
@@ -17,7 +17,7 @@ impl Menu {
     fn from_str(s: &str) -> Option<Self> {
         match s {
             "Notes" => Some(Menu::Notes),
-            "Phoenix" => Some(Menu::Phoenix),
+            "Bin" => Some(Menu::Bin),
             "Projects" => Some(Menu::Projects),
             "Todos" => Some(Menu::Todos),
             _ => None,
@@ -25,7 +25,7 @@ impl Menu {
     }
 
     fn items() -> Vec<&'static str> {
-        vec!["Notes", "Phoenix", "Projects", "Todos"]
+        vec!["Notes", "Bin", "Projects", "Todos"]
     }
 }
 
@@ -85,7 +85,7 @@ impl MainScreen {
                     let item = self.list_items[i];
                     let screen = match Menu::from_str(item)? {
                         Menu::Notes => ScreenType::Notes,
-                        Menu::Phoenix => ScreenType::Phoenix,
+                        Menu::Bin => ScreenType::Bin,
                         Menu::Todos => ScreenType::Todos,
                         Menu::Projects => ScreenType::Projects,
                     };
