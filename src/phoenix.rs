@@ -89,7 +89,7 @@ impl Phoenix {
 
                 match channel
                     .call(
-                        Event::from_string(value.from),
+                        Event::from_string(value.name),
                         Payload::json_from_serialized(payload.to_string()).unwrap(),
                         Duration::from_secs(10),
                     )

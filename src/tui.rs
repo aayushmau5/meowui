@@ -1,3 +1,4 @@
+use crate::app::App;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
@@ -7,9 +8,8 @@ use ratatui::prelude::CrosstermBackend;
 use ratatui::Terminal;
 use std::io::stdout;
 
-use crate::app::App;
-
 type Term = Terminal<CrosstermBackend<std::io::Stdout>>;
+
 pub struct TUI {
     terminal: Term,
 }

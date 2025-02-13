@@ -35,7 +35,10 @@ async fn main() {
 
     let app = App::new(socket_rx, screen_tx);
     let mut tui = TUI::new();
-    tui.run(app).unwrap();
+    match tui.run(app) {
+        Ok(()) => {}
+        Err(e) => eprintln!("{e}"),
+    }
 
     let _ = signal_close_tx.send(true);
     let _ = tokio::join!(phoenix_handle);

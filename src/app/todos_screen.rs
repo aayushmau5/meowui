@@ -1,3 +1,4 @@
+use super::{AppActions, ScreenType};
 use crate::phoenix::event::PhoenixEvent;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -6,7 +7,6 @@ use ratatui::{
     Frame,
 };
 
-use super::{AppActions, ScreenType};
 pub struct TodosScreen {}
 
 impl TodosScreen {

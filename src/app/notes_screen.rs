@@ -44,7 +44,7 @@ impl NotesScreen {
 
     fn push_event(&self) {
         match self.screen_sender.try_send(PhoenixEvent {
-            from: "notes".to_string(),
+            name: "notes".to_string(),
             payload: None,
         }) {
             Ok(()) => info!("sent message"),
