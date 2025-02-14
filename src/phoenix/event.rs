@@ -3,6 +3,7 @@ use phoenix_channels_client::{Payload, JSON};
 use std::fmt::Display;
 
 /// Generic event over phoenix socket used for both 'send' and 'receive'
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct PhoenixEvent {
     pub name: String,
     pub payload: Option<serde_json::Value>,
@@ -32,9 +33,10 @@ impl From<Payload> for PhoenixEvent {
         match value {
             Payload::JSONPayload { json } => {
                 let json_value: serde_json::Value = JSON::into(json);
+                let json_value: PhoenixEvent = serde_json::from_value(json_value).unwrap();
                 Self {
-                    name: json_value["name"].as_str().unwrap().to_string(),
-                    payload: json_value.get("payload").cloned(),
+                    name: json_value.name,
+                    payload: json_value.payload,
                 }
             }
             _ => panic!("Expecting JSON, received Binary payload."),

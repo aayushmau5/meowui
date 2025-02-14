@@ -18,11 +18,17 @@ use tokio::sync::mpsc::Sender;
 /// socket -> screen: `{"name": "bin", "payload": {"action": "get-all", "data": [...]}}`
 pub struct BinScreen {
     pub screen_sender: Sender<PhoenixEvent>,
+    pub bins: Vec<Bin>,
 }
+
+struct Bin {}
 
 impl BinScreen {
     pub fn new(screen_sender: Sender<PhoenixEvent>) -> Self {
-        let bin_screen = Self { screen_sender };
+        let bin_screen = Self {
+            screen_sender,
+            bins: Vec::new(),
+        };
         bin_screen.push_event(Some(json!({"action": "get-all"})));
         bin_screen
     }
@@ -45,8 +51,8 @@ impl BinScreen {
         }
     }
 
-    pub fn handle_socket_event(&self, payload: PhoenixEvent) {
-        info!("{payload}");
+    pub fn handle_socket_event(&self, event: PhoenixEvent) {
+        info!("{event}");
     }
 
     fn push_event(&self, payload: Option<Value>) {

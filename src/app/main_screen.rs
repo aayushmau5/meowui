@@ -117,7 +117,7 @@ impl MainScreen {
         self.list_state.select_last();
     }
 
-    pub fn handle_socket_event(&self, payload: PhoenixEvent) {
-        println!("{payload}");
+    pub fn handle_socket_event(&self, event: PhoenixEvent) {
+        println!("{event}");
     }
 }
