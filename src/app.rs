@@ -24,7 +24,7 @@ pub struct App {
     pub screen_sender: Sender<PhoenixEvent>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ScreenType {
     Main,
     Todos,
@@ -131,23 +131,7 @@ impl App {
     pub fn receive_socket_events(&mut self) {
         if let Ok(event_payload) = self.socket_receiver.try_recv() {
             match (event_payload.for_screen(), &self.screen_type) {
-                (ScreenType::Main, ScreenType::Main) => {
-                    self.screen.handle_socket_event(event_payload)
-                }
-
-                (ScreenType::Bin, ScreenType::Bin) => {
-                    self.screen.handle_socket_event(event_payload)
-                }
-
-                (ScreenType::Notes, ScreenType::Notes) => {
-                    self.screen.handle_socket_event(event_payload)
-                }
-
-                (ScreenType::Projects, ScreenType::Notes) => {
-                    self.screen.handle_socket_event(event_payload)
-                }
-
-                (ScreenType::Todos, ScreenType::Todos) => {
+                (payload_screen_type, screen_type) if payload_screen_type == *screen_type => {
                     self.screen.handle_socket_event(event_payload)
                 }
 
