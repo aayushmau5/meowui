@@ -18,11 +18,13 @@ use todos_screen::TodosScreen;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub struct App {
+    pub screen_type: ScreenType,
     pub screen: Screens,
     pub socket_receiver: Receiver<PhoenixEvent>,
     pub screen_sender: Sender<PhoenixEvent>,
 }
 
+#[derive(Debug)]
 pub enum ScreenType {
     Main,
     Todos,
@@ -83,6 +85,7 @@ impl App {
     ) -> Self {
         Self {
             screen: Screens::Main(MainScreen::new()),
+            screen_type: ScreenType::Main,
             socket_receiver,
             screen_sender,
         }
@@ -96,16 +99,23 @@ impl App {
         let key_response = self.screen.handle_key(key);
         match key_response {
             Some(AppActions::ChangeScreen(screen)) => {
-                let screen = match screen {
-                    ScreenType::Main => Screens::Main(MainScreen::new()),
-                    ScreenType::Notes => {
-                        Screens::Notes(NotesScreen::new(self.screen_sender.clone()))
-                    }
-                    ScreenType::Bin => Screens::Bin(BinScreen::new(self.screen_sender.clone())),
-                    ScreenType::Projects => Screens::Projects(ProjectsScreen::new()),
-                    ScreenType::Todos => Screens::Todos(TodosScreen::new()),
+                let (screen_type, screen) = match screen {
+                    ScreenType::Main => (ScreenType::Main, Screens::Main(MainScreen::new())),
+                    ScreenType::Notes => (
+                        ScreenType::Notes,
+                        Screens::Notes(NotesScreen::new(self.screen_sender.clone())),
+                    ),
+                    ScreenType::Bin => (
+                        ScreenType::Bin,
+                        Screens::Bin(BinScreen::new(self.screen_sender.clone())),
+                    ),
+                    ScreenType::Projects => (
+                        ScreenType::Projects,
+                        Screens::Projects(ProjectsScreen::new()),
+                    ),
+                    ScreenType::Todos => (ScreenType::Todos, Screens::Todos(TodosScreen::new())),
                 };
-                self.change_screen(screen);
+                self.change_screen(screen_type, screen);
                 None
             }
             Some(AppActions::Quit) => Some(TUIAction::Quit),
@@ -113,15 +123,41 @@ impl App {
         }
     }
 
-    pub fn change_screen(&mut self, screen: Screens) {
+    pub fn change_screen(&mut self, screen_type: ScreenType, screen: Screens) {
+        self.screen_type = screen_type;
         self.screen = screen;
     }
 
     pub fn receive_socket_events(&mut self) {
         if let Ok(event_payload) = self.socket_receiver.try_recv() {
-            // TODO: filter between main app events and screen specific events(here? or in each screen?)
-            info!("receive_socket_event: {event_payload}");
-            self.screen.handle_socket_event(event_payload);
+            match (event_payload.for_screen(), &self.screen_type) {
+                (ScreenType::Main, ScreenType::Main) => {
+                    self.screen.handle_socket_event(event_payload)
+                }
+
+                (ScreenType::Bin, ScreenType::Bin) => {
+                    self.screen.handle_socket_event(event_payload)
+                }
+
+                (ScreenType::Notes, ScreenType::Notes) => {
+                    self.screen.handle_socket_event(event_payload)
+                }
+
+                (ScreenType::Projects, ScreenType::Notes) => {
+                    self.screen.handle_socket_event(event_payload)
+                }
+
+                (ScreenType::Todos, ScreenType::Todos) => {
+                    self.screen.handle_socket_event(event_payload)
+                }
+
+                (payload_screen_type, screen_type) => {
+                    info!(
+                        "Screen: {:?} Received payload: {:?}",
+                        payload_screen_type, screen_type
+                    )
+                }
+            }
         }
     }
 }

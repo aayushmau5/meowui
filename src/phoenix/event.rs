@@ -1,3 +1,4 @@
+use crate::app::ScreenType;
 use phoenix_channels_client::{Payload, JSON};
 use std::fmt::Display;
 
@@ -7,7 +8,18 @@ pub struct PhoenixEvent {
     pub payload: Option<serde_json::Value>,
 }
 
-impl PhoenixEvent {}
+impl PhoenixEvent {
+    pub fn for_screen(&self) -> ScreenType {
+        match self.name.as_str() {
+            "main" => ScreenType::Main,
+            "bin" => ScreenType::Bin,
+            "notes" => ScreenType::Notes,
+            "projects" => ScreenType::Projects,
+            "todos" => ScreenType::Todos,
+            _ => panic!("Not implemented for event: {}", self.name.as_str()),
+        }
+    }
+}
 
 impl Display for PhoenixEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -21,7 +33,7 @@ impl From<Payload> for PhoenixEvent {
             Payload::JSONPayload { json } => {
                 let json_value: serde_json::Value = JSON::into(json);
                 Self {
-                    name: json_value.get("name").unwrap().to_string(),
+                    name: json_value["name"].as_str().unwrap().to_string(),
                     payload: json_value.get("payload").cloned(),
                 }
             }
