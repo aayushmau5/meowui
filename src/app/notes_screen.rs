@@ -3,7 +3,7 @@ use crate::phoenix::event::PhoenixEvent;
 use cli_log::info;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    style::{Color, Style},
+    style::{Color, Style, Stylize},
     widgets::{Block, BorderType, Borders},
     Frame,
 };
@@ -31,10 +31,10 @@ impl NotesScreen {
     pub fn render(&mut self, f: &mut Frame) {
         let block = Block::new()
             .border_type(BorderType::Rounded)
-            .borders(Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::default().fg(Color::White))
-            .style(Style::default().bg(Color::Black))
-            .title("Notes Screen");
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Green))
+            .style(Style::new().green())
+            .title("Notes");
         f.render_widget(block, f.area());
     }
 

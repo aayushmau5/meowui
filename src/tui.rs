@@ -1,5 +1,5 @@
 use crate::app::App;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{self, poll, Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -7,6 +7,7 @@ use ratatui::crossterm::terminal::{
 use ratatui::prelude::CrosstermBackend;
 use ratatui::Terminal;
 use std::io::stdout;
+use std::time::Duration;
 
 type Term = Terminal<CrosstermBackend<std::io::Stdout>>;
 
@@ -52,18 +53,20 @@ impl TUI {
         loop {
             app.receive_socket_events();
             self.terminal.draw(|f| app.render(f))?;
-            if let Event::Key(e) = event::read()? {
-                let response = match e {
-                    KeyEvent {
-                        code: KeyCode::Char('c'),
-                        modifiers: KeyModifiers::CONTROL,
-                        ..
-                    } => Some(TUIAction::Quit),
-                    e => app.handle_key(e),
-                };
-                match response {
-                    Some(TUIAction::Quit) => break Ok(()),
-                    None => {}
+            if poll(Duration::from_secs(0))? {
+                if let Event::Key(e) = event::read()? {
+                    let response = match e {
+                        KeyEvent {
+                            code: KeyCode::Char('c'),
+                            modifiers: KeyModifiers::CONTROL,
+                            ..
+                        } => Some(TUIAction::Quit),
+                        e => app.handle_key(e),
+                    };
+                    match response {
+                        Some(TUIAction::Quit) => break Ok(()),
+                        None => {}
+                    }
                 }
             }
         }
