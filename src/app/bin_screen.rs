@@ -1,9 +1,11 @@
 use super::{AppActions, ScreenType};
 use crate::phoenix::event::PhoenixEvent;
+use chrono::{DateTime, Local};
 use cli_log::info;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Color, Style, Stylize},
+    text::{Span, Text},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState},
     Frame,
 };
@@ -26,12 +28,17 @@ pub struct BinScreen {
 struct Bin {
     title: String,
     content: String,
-    expire_at: String,
+    expire_at: DateTime<Local>,
     files: Vec<File>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct File {}
+struct File {
+    name: String,
+    access_path: String,
+    #[serde(rename = "type")]
+    type_name: String,
+}
 
 impl BinScreen {
     pub fn new(screen_sender: Sender<PhoenixEvent>) -> Self {
@@ -45,10 +52,16 @@ impl BinScreen {
     }
 
     pub fn render(&mut self, f: &mut Frame) {
-        let items = self
-            .bins
-            .iter()
-            .map(|item| ListItem::from(item.title.as_str()));
+        let items = self.bins.iter().map(|item| {
+            let mut text = Text::default();
+            let formatted_date_time = item.expire_at.format("%d/%m/%Y %I:%M %p").to_string();
+            text.extend([
+                Span::raw(&item.title),
+                Span::raw(format!("Expire at: {formatted_date_time}")).blue(),
+                Span::raw("\n"),
+            ]);
+            ListItem::new(text)
+        });
 
         let block = Block::new()
             .border_type(BorderType::Rounded)
@@ -59,10 +72,10 @@ impl BinScreen {
 
         let list = List::new(items)
             .block(block)
-            .highlight_style(Style::new().reversed())
+            .highlight_style(Style::new().bg(Color::Green))
             .style(Style::new().green())
-            .highlight_symbol(">>")
-            .repeat_highlight_symbol(true);
+            .highlight_symbol("> ")
+            .repeat_highlight_symbol(false);
 
         f.render_stateful_widget(list, f.area(), &mut self.list_state);
     }
@@ -103,7 +116,9 @@ impl BinScreen {
                 "get-all" => {
                     let data: Result<Vec<Bin>, serde_json::Error> = serde_json::from_value(data);
                     if data.is_ok() {
-                        self.bins = data.unwrap();
+                        let data = data.unwrap();
+                        info!("{:#?}", data);
+                        self.bins = data;
                     }
                 }
                 e => info!("Unhandled action: {e}"),
