@@ -52,7 +52,7 @@ impl MainScreen {
             .block(Block::bordered().title("MeowUI"))
             .highlight_style(Style::new().reversed())
             .style(Style::new().green())
-            .highlight_symbol(">>")
+            .highlight_symbol("-> ")
             .repeat_highlight_symbol(true);
         f.render_stateful_widget(list, f.area(), &mut self.list_state);
     }
