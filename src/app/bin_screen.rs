@@ -31,9 +31,18 @@ pub struct BinScreen {
     pub screen_sender: Sender<PhoenixEvent>,
     bins: Vec<Bin>,
     list_state: ListState,
-    selected: Option<Bin>,
+    current_screen: CurrentScreen,
+}
+
+enum CurrentScreen {
+    Main,
+    Show(Selected),
+    Edit(Selected),
+}
+
+struct Selected {
+    selected: Bin,
     selected_file: ListState,
-    is_edit: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -59,9 +68,7 @@ impl BinScreen {
             screen_sender,
             bins: Vec::new(),
             list_state: ListState::default(),
-            selected: None,
-            selected_file: ListState::default(),
-            is_edit: false,
+            current_screen: CurrentScreen::Main,
         };
         bin_screen.push_event(Some(json!({"action": "get-all"})));
         bin_screen
@@ -73,18 +80,13 @@ impl BinScreen {
             .constraints([Constraint::Min(1), Constraint::Length(3)])
             .split(f.area());
 
-        if !self.selected.is_none() {
-            if self.is_edit {
-                self.edit_bin_widget(chunks[0], f);
-                self.help_widget(chunks[1], f);
-            } else {
-                self.bin_widget(chunks[0], f);
-                self.help_widget(chunks[1], f);
-            }
-        } else {
-            self.menu_items_widget(chunks[0], f);
-            self.help_widget(chunks[1], f);
+        match self.current_screen {
+            CurrentScreen::Main => self.menu_items_widget(chunks[0], f),
+            CurrentScreen::Show(_) => self.bin_widget(chunks[0], f),
+            CurrentScreen::Edit(_) => self.edit_bin_widget(chunks[0], f),
         }
+
+        self.help_widget(chunks[1], f);
     }
 
     fn menu_items_widget(&mut self, area: Rect, f: &mut Frame) {
@@ -117,42 +119,46 @@ impl BinScreen {
     }
 
     fn bin_widget(&mut self, area: Rect, f: &mut Frame) {
-        let selected = self.selected.as_ref().unwrap();
+        if let CurrentScreen::Show(selected) = &self.current_screen {
+            if !selected.selected.files.is_empty() {
+                return self.bin_widget_with_files(area, f);
+            }
 
-        if !selected.files.is_empty() {
-            return self.bin_widget_with_files(area, f);
+            let layout_chunks = Layout::default()
+                .constraints([Constraint::Length(3), Constraint::Min(1)])
+                .split(area);
+
+            let top_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+                .border_style(Style::default().fg(Color::Green))
+                .style(Style::new().green())
+                .title(format!("{} - Bin", selected.selected.title));
+
+            let formatted_date_time = selected
+                .selected
+                .expire_at
+                .format("%d/%m/%Y %I:%M %p")
+                .to_string();
+            let expire_text = Text::style(
+                format!("Expire at: {}\n\n", formatted_date_time).into(),
+                Style::default().fg(Color::Blue),
+            );
+            let expire_paragraph = Paragraph::new(expire_text).block(top_block);
+            f.render_widget(expire_paragraph, layout_chunks[0]);
+
+            let content_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
+                .border_style(Style::default().fg(Color::Green))
+                .style(Style::new().green());
+            let content_text = Text::styled(
+                format!("{}", selected.selected.content),
+                Style::default().fg(Color::Magenta),
+            );
+            let content_paragraph = Paragraph::new(content_text).block(content_block);
+            f.render_widget(content_paragraph, layout_chunks[1]);
         }
-
-        let layout_chunks = Layout::default()
-            .constraints([Constraint::Length(3), Constraint::Min(1)])
-            .split(area);
-
-        let top_block = Block::new()
-            .border_type(BorderType::Rounded)
-            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::default().fg(Color::Green))
-            .style(Style::new().green())
-            .title(format!("{} - Bin", selected.title));
-
-        let formatted_date_time = selected.expire_at.format("%d/%m/%Y %I:%M %p").to_string();
-        let expire_text = Text::style(
-            format!("Expire at: {}\n\n", formatted_date_time).into(),
-            Style::default().fg(Color::Blue),
-        );
-        let expire_paragraph = Paragraph::new(expire_text).block(top_block);
-        f.render_widget(expire_paragraph, layout_chunks[0]);
-
-        let content_block = Block::new()
-            .border_type(BorderType::Rounded)
-            .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
-            .border_style(Style::default().fg(Color::Green))
-            .style(Style::new().green());
-        let content_text = Text::styled(
-            format!("{}", selected.content),
-            Style::default().fg(Color::Magenta),
-        );
-        let content_paragraph = Paragraph::new(content_text).block(content_block);
-        f.render_widget(content_paragraph, layout_chunks[1]);
     }
 
     fn bin_widget_with_files(&mut self, area: Rect, f: &mut Frame) {
@@ -164,72 +170,76 @@ impl BinScreen {
             ])
             .split(area);
 
-        let selected = self.selected.as_ref().unwrap();
+        if let CurrentScreen::Show(selected) = &mut self.current_screen {
+            let top_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+                .border_style(Style::default().fg(Color::Green))
+                .style(Style::new().green())
+                .title(format!("{} - Bin", selected.selected.title));
 
-        let top_block = Block::new()
-            .border_type(BorderType::Rounded)
-            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::default().fg(Color::Green))
-            .style(Style::new().green())
-            .title(format!("{} - Bin", selected.title));
+            let formatted_date_time = selected
+                .selected
+                .expire_at
+                .format("%d/%m/%Y %I:%M %p")
+                .to_string();
+            let expire_text = Text::style(
+                format!("Expire at: {}\n\n", formatted_date_time).into(),
+                Style::default().fg(Color::Blue),
+            );
+            let expire_paragraph = Paragraph::new(expire_text).block(top_block);
+            f.render_widget(expire_paragraph, layout_chunks[0]);
 
-        let formatted_date_time = selected.expire_at.format("%d/%m/%Y %I:%M %p").to_string();
-        let expire_text = Text::style(
-            format!("Expire at: {}\n\n", formatted_date_time).into(),
-            Style::default().fg(Color::Blue),
-        );
-        let expire_paragraph = Paragraph::new(expire_text).block(top_block);
-        f.render_widget(expire_paragraph, layout_chunks[0]);
+            let content_block = Block::new()
+                .borders(Borders::LEFT | Borders::RIGHT)
+                .border_style(Style::default().fg(Color::Green))
+                .style(Style::new().green());
+            let content_text = Text::styled(
+                format!("{}", selected.selected.content),
+                Style::default().fg(Color::Magenta),
+            );
+            let content_paragraph = Paragraph::new(content_text).block(content_block);
+            f.render_widget(content_paragraph, layout_chunks[1]);
 
-        let content_block = Block::new()
-            .borders(Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::default().fg(Color::Green))
-            .style(Style::new().green());
-        let content_text = Text::styled(
-            format!("{}", selected.content),
-            Style::default().fg(Color::Magenta),
-        );
-        let content_paragraph = Paragraph::new(content_text).block(content_block);
-        f.render_widget(content_paragraph, layout_chunks[1]);
-
-        let file_block = Block::new()
-            .border_type(BorderType::Rounded)
-            .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
-            .border_style(Style::default().fg(Color::Green))
-            .style(Style::new().green())
-            .padding(Padding::top(1))
-            .title("Files:");
-        let files = selected.files.iter().map(|file| {
-            let formatted = Text::from(vec![
-                Line::from(file.name.as_str()),
-                Line::from(file.type_name.as_str()).style(Style::default().fg(Color::Blue)),
-                Line::from("\n"),
-            ]);
-            ListItem::new(formatted).style(Style::default().fg(Color::Cyan))
-        });
-        let list = List::new(files)
-            .highlight_style(Style::new().bg(Color::Green))
-            .style(Style::new().green())
-            .highlight_symbol("-> ")
-            .repeat_highlight_symbol(false)
-            .block(file_block);
-        f.render_stateful_widget(list, layout_chunks[2], &mut self.selected_file);
+            let file_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM)
+                .border_style(Style::default().fg(Color::Green))
+                .style(Style::new().green())
+                .padding(Padding::top(1))
+                .title("Files:");
+            let files = selected.selected.files.iter().map(|file| {
+                let formatted = Text::from(vec![
+                    Line::from(file.name.as_str()),
+                    Line::from(file.type_name.as_str()).style(Style::default().fg(Color::Blue)),
+                    Line::from("\n"),
+                ]);
+                ListItem::new(formatted).style(Style::default().fg(Color::Cyan))
+            });
+            let list = List::new(files)
+                .highlight_style(Style::new().bg(Color::Green))
+                .style(Style::new().green())
+                .highlight_symbol("-> ")
+                .repeat_highlight_symbol(false)
+                .block(file_block);
+            f.render_stateful_widget(list, layout_chunks[2], &mut selected.selected_file);
+        }
     }
 
     fn help_widget(&self, area: Rect, f: &mut Frame) {
-        let mut help_message =
-            "(q) to quit / (b) back to main menu / (n) to add a new bin / (l) to see a bin";
-        if !self.selected.is_none() {
-            if self.is_edit {
-                help_message = "(Esc) to cancel edit / (Ctrl-S) to save";
-            } else {
-                if self.selected_file.selected().is_none() {
-                    help_message = "(q) to quit / (b) back to bin menu / (d) to delete this bin / (e) to edit this bin";
+        let help_message = match &self.current_screen {
+            CurrentScreen::Main => {
+                "(q) to quit / (b) back to main menu / (n) to add a new bin / (l) to see a bin"
+            }
+            CurrentScreen::Show(selected) => {
+                if selected.selected_file.selected().is_none() {
+                    "(q) to quit / (b) back to bin menu / (d) to delete this bin / (e) to edit this bin"
                 } else {
-                    help_message = "(q) to quit / (b) back to bin menu / (o) open file / (d) to delete this bin / (e) to edit this bin";
+                    "(q) to quit / (b) back to bin menu / (o) open file / (d) to delete this bin / (e) to edit this bin"
                 }
             }
-        }
+            CurrentScreen::Edit(_) => "(Esc) to cancel edit / (Ctrl-S) to save",
+        };
 
         let help_widget = Span::styled(help_message, Style::default().fg(Color::Blue));
         let help_widget = Paragraph::new(Line::from(help_widget)).block(
@@ -248,102 +258,95 @@ impl BinScreen {
     }
 
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
-        match e.code {
-            KeyCode::Char('q') => {
-                if self.is_edit {
-                    return None;
-                }
-                Some(AppActions::Quit)
-            }
-            KeyCode::Esc => {
-                if self.is_edit {
-                    self.is_edit = false;
-                    return None;
-                }
-                Some(AppActions::Quit)
-            }
-            KeyCode::Char('b') => {
-                if self.selected.is_none() {
-                    Some(AppActions::ChangeScreen(ScreenType::Main))
-                } else {
-                    self.selected = None;
+        match &self.current_screen {
+            CurrentScreen::Main => match e.code {
+                KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
+                KeyCode::Char('b') => Some(AppActions::ChangeScreen(ScreenType::Main)),
+                KeyCode::Char('j') | KeyCode::Down => {
+                    self.select_next();
                     None
                 }
-            }
-            KeyCode::Char('h') | KeyCode::Left => {
-                if !self.selected.is_none() {
-                    return None;
+                KeyCode::Char('k') | KeyCode::Up => {
+                    self.select_previous();
+                    None
                 }
-                self.select_none();
-                None
-            }
-            KeyCode::Char('j') | KeyCode::Down => {
-                if !self.selected.is_none() && !self.selected.as_ref().unwrap().files.is_empty() {
-                    self.select_next_file();
-                    return None;
+                KeyCode::Char('g') | KeyCode::Home => {
+                    self.select_first();
+                    None
                 }
-                self.select_next();
-                None
-            }
-            KeyCode::Char('k') | KeyCode::Up => {
-                if !self.selected.is_none() && !self.selected.as_ref().unwrap().files.is_empty() {
-                    self.select_previous_file();
-                    return None;
+                KeyCode::Char('G') | KeyCode::End => {
+                    self.select_last();
+                    None
                 }
-                self.select_previous();
-                None
-            }
-            KeyCode::Char('g') | KeyCode::Home => {
-                if !self.selected.is_none() {
-                    return None;
-                }
-                self.select_first();
-                None
-            }
-            KeyCode::Char('G') | KeyCode::End => {
-                if !self.selected.is_none() {
-                    return None;
-                }
-                self.select_last();
-                None
-            }
-            KeyCode::Char('o') => {
-                if !self.selected.is_none() && !self.selected_file.selected().is_none() {
-                    let selected_index = self.selected_file.selected().unwrap();
-                    let selected_file = &self.selected.as_ref().unwrap().files[selected_index];
-
-                    match open::that(format!("{}{}", ENDPOINT, selected_file.access_path)) {
-                        Ok(()) => {}
-                        Err(e) => info!("Failed to open file: {e}"),
-                    }
-                }
-                None
-            }
-            KeyCode::Char('e') => {
-                if let Some(bin) = &self.selected {
-                    // we edit the selected bin
-                    self.is_edit = true;
-                    info!("editing {:?}", bin);
-                }
-                None
-            }
-            KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
-                if self.is_edit {
-                    self.is_edit = false;
-                }
-                None
-            }
-            KeyCode::Char('l') | KeyCode::Enter => {
-                if self.selected.is_none() {
+                KeyCode::Char('l') | KeyCode::Enter => {
                     if let Some(index) = self.list_state.selected() {
                         let selected = self.bins[index].clone();
-                        self.selected = Some(selected);
-                        self.selected_file = ListState::default().with_selected(None);
+                        self.current_screen = CurrentScreen::Show(Selected {
+                            selected,
+                            selected_file: ListState::default().with_selected(None),
+                        });
                     }
+                    None
                 }
-                None
-            }
-            _ => None,
+                _ => None,
+            },
+            CurrentScreen::Show(selected) => match e.code {
+                KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
+                KeyCode::Char('b') => {
+                    self.current_screen = CurrentScreen::Main;
+                    None
+                }
+                KeyCode::Char('j') | KeyCode::Down => {
+                    if !selected.selected.files.is_empty() {
+                        self.select_next_file();
+                    }
+                    None
+                }
+                KeyCode::Char('k') | KeyCode::Up => {
+                    if !selected.selected.files.is_empty() {
+                        self.select_previous_file();
+                    }
+                    None
+                }
+                KeyCode::Char('o') => {
+                    if !selected.selected_file.selected().is_none() {
+                        let selected_index = selected.selected_file.selected().unwrap();
+                        let selected_file = &selected.selected.files[selected_index];
+
+                        match open::that(format!("{}{}", ENDPOINT, selected_file.access_path)) {
+                            Ok(()) => {}
+                            Err(e) => info!("Failed to open file: {e}"),
+                        }
+                    }
+                    None
+                }
+                KeyCode::Char('e') => {
+                    self.current_screen = CurrentScreen::Edit(Selected {
+                        selected: selected.selected.clone(),
+                        selected_file: ListState::default().with_selected(None),
+                    });
+                    None
+                }
+                _ => None,
+            },
+            CurrentScreen::Edit(selected) => match e.code {
+                KeyCode::Esc => {
+                    // TODO: get to show state without any changes
+                    self.current_screen = CurrentScreen::Show(Selected {
+                        selected: selected.selected.clone(),
+                        selected_file: ListState::default().with_selected(None),
+                    });
+                    None
+                }
+                KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
+                    self.current_screen = CurrentScreen::Show(Selected {
+                        selected: selected.selected.clone(),
+                        selected_file: ListState::default().with_selected(None),
+                    });
+                    None
+                }
+                _ => None,
+            },
         }
     }
 
@@ -376,10 +379,6 @@ impl BinScreen {
         }
     }
 
-    fn select_none(&mut self) {
-        self.list_state.select(None);
-    }
-
     fn select_next(&mut self) {
         self.list_state.select_next();
     }
@@ -396,10 +395,18 @@ impl BinScreen {
     }
 
     fn select_previous_file(&mut self) {
-        self.selected_file.select_previous();
+        match &mut self.current_screen {
+            CurrentScreen::Show(selected) => selected.selected_file.select_previous(),
+            CurrentScreen::Edit(selected) => selected.selected_file.select_previous(),
+            _ => {}
+        }
     }
 
     fn select_next_file(&mut self) {
-        self.selected_file.select_next();
+        match &mut self.current_screen {
+            CurrentScreen::Show(selected) => selected.selected_file.select_next(),
+            CurrentScreen::Edit(selected) => selected.selected_file.select_next(),
+            _ => {}
+        }
     }
 }
