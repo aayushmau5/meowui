@@ -1,5 +1,6 @@
 use super::{AppActions, ScreenType};
-use crate::phoenix::event::PhoenixEvent;
+use crate::tui::input_widget::InputWidget;
+use crate::{phoenix::event::PhoenixEvent, tui::multiline_input_widget::MultilineInput};
 use chrono::{DateTime, Local};
 use cli_log::info;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -36,13 +37,28 @@ pub struct BinScreen {
 
 enum CurrentScreen {
     Main,
+    // New(Bin)
     Show(Selected),
-    Edit(Selected),
+    Edit(EditSelected),
 }
 
 struct Selected {
     selected: Bin,
     selected_file: ListState,
+}
+
+struct EditSelected {
+    selected: Bin,
+    selected_file: ListState,
+    title_input: InputWidget<'static>,
+    content_input: MultilineInput<'static>,
+    focused_element: EditElements,
+}
+
+enum EditElements {
+    Title,
+    Content,
+    Files,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -251,10 +267,29 @@ impl BinScreen {
     }
 
     fn edit_bin_widget(&mut self, area: Rect, f: &mut Frame) {
-        // tabs to switch between inputs
-        // title, content, files(removal for now), extend expire at(x - min/hour/day)
-        // how to handle edits?
-        // https://ratatui.rs/examples/apps/user_input/
+        let chunks = Layout::default()
+            .constraints([Constraint::Length(4), Constraint::Min(1)])
+            .split(area);
+
+        if let CurrentScreen::Edit(edit_selected) = &self.current_screen {
+            let title_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Magenta))
+                .style(Style::new().green())
+                .title("Title");
+            let title_widget = edit_selected.title_input.clone().block(title_block);
+            f.render_widget(&title_widget, chunks[0]);
+
+            let content_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Magenta))
+                .style(Style::new().green())
+                .title("Content");
+            let content_widget = edit_selected.content_input.clone().block(content_block);
+            f.render_widget(&content_widget, chunks[1]);
+        }
     }
 
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
@@ -321,9 +356,16 @@ impl BinScreen {
                     None
                 }
                 KeyCode::Char('e') => {
-                    self.current_screen = CurrentScreen::Edit(Selected {
+                    self.current_screen = CurrentScreen::Edit(EditSelected {
                         selected: selected.selected.clone(),
                         selected_file: ListState::default().with_selected(None),
+                        title_input: InputWidget::new(
+                            String::new(),
+                            Style::default(),
+                            Style::default().fg(Color::Black).bg(Color::White),
+                        ),
+                        content_input: MultilineInput::new(String::new()),
+                        focused_element: EditElements::Title,
                     });
                     None
                 }
@@ -339,13 +381,43 @@ impl BinScreen {
                     None
                 }
                 KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
+                    if let CurrentScreen::Edit(edit_selected) = &self.current_screen {
+                        let val = edit_selected.title_input.content();
+                        info!("Input: {val}");
+                    }
+
                     self.current_screen = CurrentScreen::Show(Selected {
                         selected: selected.selected.clone(),
                         selected_file: ListState::default().with_selected(None),
                     });
                     None
                 }
-                _ => None,
+                KeyCode::Tab => {
+                    if let CurrentScreen::Edit(edit_selected) = &mut self.current_screen {
+                        match edit_selected.focused_element {
+                            EditElements::Title => {
+                                edit_selected.focused_element = EditElements::Content
+                            }
+                            EditElements::Content => {
+                                edit_selected.focused_element = EditElements::Files
+                            }
+                            EditElements::Files => {
+                                edit_selected.focused_element = EditElements::Title
+                            }
+                        }
+                    }
+                    None
+                }
+                _ => {
+                    if let CurrentScreen::Edit(edit_selected) = &mut self.current_screen {
+                        match edit_selected.focused_element {
+                            EditElements::Title => edit_selected.title_input.handle_key(e),
+                            EditElements::Content => edit_selected.content_input.handle_key(e),
+                            _ => {}
+                        }
+                    }
+                    None
+                }
             },
         }
     }
@@ -382,6 +454,7 @@ impl BinScreen {
     fn select_next(&mut self) {
         self.list_state.select_next();
     }
+
     fn select_previous(&mut self) {
         self.list_state.select_previous();
     }

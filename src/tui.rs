@@ -9,6 +9,9 @@ use ratatui::Terminal;
 use std::io::stdout;
 use std::time::Duration;
 
+pub mod input_widget;
+pub mod multiline_input_widget;
+
 type Term = Terminal<CrosstermBackend<std::io::Stdout>>;
 
 pub struct TUI {
