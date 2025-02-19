@@ -10,7 +10,6 @@ pub struct MultilineInput<'a> {
     cursor_x: usize,
     cursor_y: usize,
     block: Option<Block<'a>>,
-    scroll_offset: usize,
 }
 
 impl<'a> MultilineInput<'a> {
@@ -31,7 +30,6 @@ impl<'a> MultilineInput<'a> {
             cursor_x,
             cursor_y,
             block: None,
-            scroll_offset: 0,
         }
     }
 
@@ -133,29 +131,19 @@ impl Widget for &MultilineInput<'_> {
 
         // Render visible lines
         let visible_lines = inner_area.height as usize;
-        for (i, line) in self
-            .lines
-            .iter()
-            .skip(self.scroll_offset)
-            .take(visible_lines)
-            .enumerate()
-        {
+        for (i, line) in self.lines.iter().take(visible_lines).enumerate() {
             let y = inner_area.y + i as u16;
             if y < inner_area.y + inner_area.height {
                 buf.set_string(inner_area.x, y, line, Style::default().fg(Color::White));
             }
         }
 
-        // Render cursor if it's in the visible area
-        if self.cursor_y >= self.scroll_offset && self.cursor_y < self.scroll_offset + visible_lines
-        {
-            let cursor_y = inner_area.y + (self.cursor_y - self.scroll_offset) as u16;
-            if self.cursor_x as u16 <= inner_area.width {
-                buf.set_style(
-                    Rect::new(inner_area.x + self.cursor_x as u16, cursor_y, 1, 1),
-                    Style::default().fg(Color::Black).bg(Color::White),
-                );
-            }
+        let cursor_y: u16 = inner_area.y + self.cursor_y as u16;
+        if self.cursor_x as u16 <= inner_area.width {
+            buf.set_style(
+                Rect::new(inner_area.x + self.cursor_x as u16, cursor_y, 1, 1),
+                Style::default().fg(Color::Black).bg(Color::White),
+            );
         }
     }
 }
