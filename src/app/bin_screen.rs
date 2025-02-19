@@ -2,7 +2,7 @@ use super::{AppActions, ScreenType};
 use crate::phoenix::event::PhoenixEvent;
 use chrono::{DateTime, Local};
 use cli_log::info;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
@@ -21,12 +21,19 @@ const ENDPOINT: &str = "http://localhost:4000";
 /// screen -> socket: `{"name": "bin", "payload": {"action": "get-all"}}`
 ///
 /// socket -> screen: `{"name": "bin", "payload": {"action": "get-all", "data": [...]}}`
+///
+/// ### Edit bin
+/// screen -> socket: `{"name": "bin", "payload": {"action": "edit", "data": {"id": 1, ...}}}`
+///
+/// ### Delete bin
+/// screen -> socket: `{"name": "bin", "payload": {"action": "delete", "id": 1}}`
 pub struct BinScreen {
     pub screen_sender: Sender<PhoenixEvent>,
     bins: Vec<Bin>,
     list_state: ListState,
     selected: Option<Bin>,
     selected_file: ListState,
+    is_edit: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -54,6 +61,7 @@ impl BinScreen {
             list_state: ListState::default(),
             selected: None,
             selected_file: ListState::default(),
+            is_edit: false,
         };
         bin_screen.push_event(Some(json!({"action": "get-all"})));
         bin_screen
@@ -66,8 +74,13 @@ impl BinScreen {
             .split(f.area());
 
         if !self.selected.is_none() {
-            self.bin_widget(chunks[0], f);
-            self.help_widget(chunks[1], f);
+            if self.is_edit {
+                self.edit_bin_widget(chunks[0], f);
+                self.help_widget(chunks[1], f);
+            } else {
+                self.bin_widget(chunks[0], f);
+                self.help_widget(chunks[1], f);
+            }
         } else {
             self.menu_items_widget(chunks[0], f);
             self.help_widget(chunks[1], f);
@@ -204,24 +217,51 @@ impl BinScreen {
     }
 
     fn help_widget(&self, area: Rect, f: &mut Frame) {
-        let mut help_message = "(q) to quit / (b) back to main menu / (n) to add a new bin / (d) to delete a bin / (e) to edit a bin / (enter) to see a bin";
+        let mut help_message =
+            "(q) to quit / (b) back to main menu / (n) to add a new bin / (l) to see a bin";
         if !self.selected.is_none() {
-            if self.selected_file.selected().is_none() {
-                help_message = "(q) to quit / (b) back to bin menu / (d) to delete this bin / (e) to edit this bin";
+            if self.is_edit {
+                help_message = "(Esc) to cancel edit / (Ctrl-S) to save";
             } else {
-                help_message = "(q) to quit / (b) back to bin menu / (o) open file / (d) to delete this bin / (e) to edit this bin";
+                if self.selected_file.selected().is_none() {
+                    help_message = "(q) to quit / (b) back to bin menu / (d) to delete this bin / (e) to edit this bin";
+                } else {
+                    help_message = "(q) to quit / (b) back to bin menu / (o) open file / (d) to delete this bin / (e) to edit this bin";
+                }
             }
         }
 
         let help_widget = Span::styled(help_message, Style::default().fg(Color::Blue));
-        let help_widget =
-            Paragraph::new(Line::from(help_widget)).block(Block::default().borders(Borders::ALL));
+        let help_widget = Paragraph::new(Line::from(help_widget)).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        );
         f.render_widget(help_widget, area);
+    }
+
+    fn edit_bin_widget(&mut self, area: Rect, f: &mut Frame) {
+        // tabs to switch between inputs
+        // title, content, files(removal for now), extend expire at(x - min/hour/day)
+        // how to handle edits?
+        // https://ratatui.rs/examples/apps/user_input/
     }
 
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
         match e.code {
-            KeyCode::Char('q') | KeyCode::Esc => Some(AppActions::Quit),
+            KeyCode::Char('q') => {
+                if self.is_edit {
+                    return None;
+                }
+                Some(AppActions::Quit)
+            }
+            KeyCode::Esc => {
+                if self.is_edit {
+                    self.is_edit = false;
+                    return None;
+                }
+                Some(AppActions::Quit)
+            }
             KeyCode::Char('b') => {
                 if self.selected.is_none() {
                     Some(AppActions::ChangeScreen(ScreenType::Main))
@@ -280,10 +320,16 @@ impl BinScreen {
                 None
             }
             KeyCode::Char('e') => {
-                if let Some(index) = self.list_state.selected() {
-                    let selected = self.bins[index].clone();
-                    self.selected = Some(selected);
-                    self.selected_file = ListState::default().with_selected(None);
+                if let Some(bin) = &self.selected {
+                    // we edit the selected bin
+                    self.is_edit = true;
+                    info!("editing {:?}", bin);
+                }
+                None
+            }
+            KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
+                if self.is_edit {
+                    self.is_edit = false;
                 }
                 None
             }

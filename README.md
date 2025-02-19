@@ -1,20 +1,8 @@
 # meowui
 
-For what?
-
-Connecting to my phoenix backend.
-
-- URLs storage
-- Task manager? | ToDos?
-- Upload and download files(how?) | bin
-- Common housekeeping(such as?)
-- Project manager(need admin view on phoenix side cause too lazy to create a separate view for it)
-- Notes?
+TUI
 
 https://github.com/ratatui/awesome-ratatui
+https://github.com/rhysd/tui-textarea
 
 https://hexdocs.pm/phoenix/Phoenix.Token.html
-
-`App` can be used as a central state handling while each `Screens` can work on their own state.
-
-Event Schema: from: string, payload: Option<JSONPayload>

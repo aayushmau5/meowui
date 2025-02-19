@@ -3,7 +3,7 @@ use crate::phoenix::event::PhoenixEvent;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::Stylize;
 use ratatui::style::Style;
-use ratatui::widgets::{Block, List, ListItem, ListState};
+use ratatui::widgets::{Block, BorderType, Borders, List, ListItem, ListState};
 use ratatui::Frame;
 
 enum Menu {
@@ -49,7 +49,12 @@ impl MainScreen {
             .map(|&todo_item| ListItem::from(todo_item));
 
         let list = List::new(items)
-            .block(Block::bordered().title("MeowUI"))
+            .block(
+                Block::new()
+                    .border_type(BorderType::Rounded)
+                    .borders(Borders::ALL)
+                    .title("MeowUI"),
+            )
             .highlight_style(Style::new().reversed())
             .style(Style::new().green())
             .highlight_symbol("-> ")
