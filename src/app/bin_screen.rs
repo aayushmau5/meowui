@@ -1,8 +1,8 @@
 // TODO: refactor this file(too large)
 // TODO: remove calls to clone where unnecessary
-// TODO: add expire_at view for new and extend
 
 use super::{AppActions, ScreenType};
+use crate::tui::expire_at_input_widget::ExpireAtWidget;
 use crate::tui::input_widget::InputWidget;
 use crate::{phoenix::event::PhoenixEvent, tui::multiline_input_widget::MultilineInput};
 use chrono::{DateTime, Local};
@@ -54,6 +54,7 @@ struct Selected {
 struct NewBin {
     title_input: InputWidget<'static>,
     content_input: MultilineInput<'static>,
+    expire_at: ExpireAtWidget<'static>,
     focused_element: NewElements,
 }
 
@@ -61,6 +62,7 @@ struct EditSelected {
     bin_id: u64,
     title_input: InputWidget<'static>,
     content_input: MultilineInput<'static>,
+    expire_at: ExpireAtWidget<'static>,
     files: Vec<EditFiles>,
     selected_file: ListState,
     focused_element: EditElements,
@@ -74,12 +76,14 @@ struct EditFiles {
 enum NewElements {
     Title,
     Content,
+    Expire,
 }
 
 enum EditElements {
     Title,
     Content,
     Files,
+    Expire,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -170,6 +174,10 @@ impl BinScreen {
                         ),
                         content_input: MultilineInput::new(String::new()),
                         focused_element: NewElements::Title,
+                        expire_at: ExpireAtWidget::new(
+                            Style::default(),
+                            Style::default().fg(Color::Black).bg(Color::White),
+                        ),
                     });
                     None
                 }
@@ -234,6 +242,10 @@ impl BinScreen {
                         files,
                         selected_file: ListState::default().with_selected(None),
                         focused_element: EditElements::Title,
+                        expire_at: ExpireAtWidget::new(
+                            Style::default(),
+                            Style::default().fg(Color::Black).bg(Color::White),
+                        ),
                     });
                     None
                 }
@@ -258,10 +270,18 @@ impl BinScreen {
                         .filter(|f| !f.removed)
                         .map(|f| f.file.clone())
                         .collect();
+                    let expire_at = selected.expire_at.time();
 
-                    self.push_event(Some(
-                        json!({"action": "edit", "data": {"id": selected.bin_id, "title": edited_title, "content": edited_content, "files": files}}),
-                    ));
+                    self.push_event(Some(json!({
+                        "action": "edit",
+                        "data": {
+                            "id": selected.bin_id,
+                            "title": edited_title,
+                            "content": edited_content,
+                            "files": files,
+                            "expire": {"time": expire_at.time, "unit": expire_at.unit.to_string()}
+                        }
+                    })));
 
                     // TODO: do this after the event is received
                     let bin = Self::get_bin_by_id(&self.bins, selected.bin_id);
@@ -297,12 +317,15 @@ impl BinScreen {
                             }
                             EditElements::Content => {
                                 if edit_selected.files.is_empty() {
-                                    edit_selected.focused_element = EditElements::Title;
+                                    edit_selected.focused_element = EditElements::Expire
                                 } else {
-                                    edit_selected.focused_element = EditElements::Files;
+                                    edit_selected.focused_element = EditElements::Files
                                 }
                             }
                             EditElements::Files => {
+                                edit_selected.focused_element = EditElements::Expire
+                            }
+                            EditElements::Expire => {
                                 edit_selected.focused_element = EditElements::Title
                             }
                         }
@@ -314,6 +337,7 @@ impl BinScreen {
                         match edit_selected.focused_element {
                             EditElements::Title => edit_selected.title_input.handle_key(e),
                             EditElements::Content => edit_selected.content_input.handle_key(e),
+                            EditElements::Expire => edit_selected.expire_at.handle_key(e),
                             _ => {}
                         }
                     }
@@ -328,10 +352,15 @@ impl BinScreen {
                 KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
                     let title = new_bin.title_input.content();
                     let content = new_bin.content_input.content();
+                    let expire_at = new_bin.expire_at.time();
 
-                    self.push_event(Some(
-                        json!({"action": "new", "data": {"title": title, "content": content}}),
-                    ));
+                    self.push_event(Some(json!({
+                        "action": "new",
+                        "data": {
+                            "title": title, "content": content,
+                            "expire": {"time": expire_at.time, "unit": expire_at.unit.to_string()}
+                        }
+                    })));
 
                     None
                 }
@@ -342,6 +371,9 @@ impl BinScreen {
                                 new_bin.focused_element = NewElements::Content;
                             }
                             NewElements::Content => {
+                                new_bin.focused_element = NewElements::Expire;
+                            }
+                            NewElements::Expire => {
                                 new_bin.focused_element = NewElements::Title;
                             }
                         }
@@ -353,6 +385,7 @@ impl BinScreen {
                         match new_bin.focused_element {
                             NewElements::Title => new_bin.title_input.handle_key(e),
                             NewElements::Content => new_bin.content_input.handle_key(e),
+                            NewElements::Expire => new_bin.expire_at.handle_key(e),
                         }
                     }
                     None
@@ -483,7 +516,11 @@ impl BinScreen {
 
     fn new_bin_widget(&mut self, area: Rect, f: &mut Frame) {
         let chunks = Layout::default()
-            .constraints([Constraint::Length(4), Constraint::Min(1)])
+            .constraints([
+                Constraint::Length(4),
+                Constraint::Min(1),
+                Constraint::Length(3),
+            ])
             .split(area);
 
         if let CurrentScreen::New(new_bin) = &self.current_screen {
@@ -515,6 +552,20 @@ impl BinScreen {
                 .title("Content");
             let content_widget = new_bin.content_input.clone().block(content_block);
             f.render_widget(&content_widget, chunks[1]);
+
+            let expire_at_style = if matches!(new_bin.focused_element, NewElements::Expire) {
+                Style::default().fg(Color::Blue)
+            } else {
+                Style::default().fg(Color::Gray)
+            };
+            let expire_at_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::ALL)
+                .border_style(expire_at_style)
+                .style(Style::new().green())
+                .title("Extend expire time");
+            let expire_at_widget = new_bin.expire_at.clone().block(expire_at_block);
+            f.render_widget(&expire_at_widget, chunks[2]);
         }
     }
 
@@ -630,7 +681,11 @@ impl BinScreen {
         if let CurrentScreen::Edit(edit_selected) = &mut self.current_screen {
             let chunks = if edit_selected.files.is_empty() {
                 Layout::default()
-                    .constraints([Constraint::Length(3), Constraint::Min(1)])
+                    .constraints([
+                        Constraint::Length(3),
+                        Constraint::Min(1),
+                        Constraint::Length(3),
+                    ])
                     .split(area)
             } else {
                 Layout::default()
@@ -638,6 +693,7 @@ impl BinScreen {
                         Constraint::Length(3),
                         Constraint::Min(1),
                         Constraint::Min(1),
+                        Constraint::Length(3),
                     ])
                     .split(area)
             };
@@ -714,6 +770,26 @@ impl BinScreen {
                     .block(files_block);
                 f.render_stateful_widget(list, chunks[2], &mut edit_selected.selected_file);
             }
+
+            let chunk = if !edit_selected.files.is_empty() {
+                chunks[3]
+            } else {
+                chunks[2]
+            };
+
+            let expire_at_style = if matches!(edit_selected.focused_element, EditElements::Expire) {
+                Style::default().fg(Color::Blue)
+            } else {
+                Style::default().fg(Color::Gray)
+            };
+            let expire_at_block = Block::new()
+                .border_type(BorderType::Rounded)
+                .borders(Borders::ALL)
+                .border_style(expire_at_style)
+                .style(Style::new().green())
+                .title("Expire in");
+            let expire_at_widget = edit_selected.expire_at.clone().block(expire_at_block);
+            f.render_widget(&expire_at_widget, chunk);
         }
     }
 

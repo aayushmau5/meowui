@@ -9,6 +9,7 @@ use ratatui::Terminal;
 use std::io::stdout;
 use std::time::Duration;
 
+pub mod expire_at_input_widget;
 pub mod input_widget;
 pub mod multiline_input_widget;
 
