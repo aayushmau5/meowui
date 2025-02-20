@@ -1,5 +1,6 @@
 // TODO: refactor this file(too large)
 // TODO: remove calls to clone where unnecessary
+// TODO: add expire_at view for new and extend
 
 use super::{AppActions, ScreenType};
 use crate::tui::input_widget::InputWidget;
@@ -92,6 +93,7 @@ struct Bin {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 struct File {
+    id: String,
     name: String,
     access_path: String,
     #[serde(rename = "type")]
@@ -191,6 +193,13 @@ impl BinScreen {
                     }
                     None
                 }
+                KeyCode::Char('d') => {
+                    self.push_event(Some(
+                        json!({"action": "delete", "data": {"id": selected.selected.id}}),
+                    ));
+                    self.current_screen = CurrentScreen::Main;
+                    None
+                }
                 KeyCode::Char('o') => {
                     if !selected.selected_file.selected().is_none() {
                         let selected_index = selected.selected_file.selected().unwrap();
@@ -243,10 +252,18 @@ impl BinScreen {
                 KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
                     let edited_title = selected.title_input.content();
                     let edited_content = selected.content_input.content();
-                    info!("Title: {edited_title} Content: {edited_content}");
+                    let files: Vec<File> = selected
+                        .files
+                        .iter()
+                        .filter(|f| !f.removed)
+                        .map(|f| f.file.clone())
+                        .collect();
 
-                    // push event to socket
+                    self.push_event(Some(
+                        json!({"action": "edit", "data": {"id": selected.bin_id, "title": edited_title, "content": edited_content, "files": files}}),
+                    ));
 
+                    // TODO: do this after the event is received
                     let bin = Self::get_bin_by_id(&self.bins, selected.bin_id);
 
                     self.current_screen = CurrentScreen::Show(Selected {
@@ -311,11 +328,11 @@ impl BinScreen {
                 KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
                     let title = new_bin.title_input.content();
                     let content = new_bin.content_input.content();
-                    info!("Title: {title} Content: {content}");
 
-                    // TODO: handle error from socket
+                    self.push_event(Some(
+                        json!({"action": "new", "data": {"title": title, "content": content}}),
+                    ));
 
-                    self.current_screen = CurrentScreen::Main;
                     None
                 }
                 KeyCode::Tab => {
@@ -358,6 +375,14 @@ impl BinScreen {
                     if data.is_ok() {
                         self.bins = data.unwrap();
                         self.select_first();
+                    }
+                }
+                "new" => {
+                    let data: Result<Vec<Bin>, serde_json::Error> = serde_json::from_value(data);
+                    if data.is_ok() {
+                        self.bins = data.unwrap();
+                        self.select_first();
+                        self.current_screen = CurrentScreen::Main;
                     }
                 }
                 e => info!("Unhandled action: {e}"),
@@ -605,12 +630,12 @@ impl BinScreen {
         if let CurrentScreen::Edit(edit_selected) = &mut self.current_screen {
             let chunks = if edit_selected.files.is_empty() {
                 Layout::default()
-                    .constraints([Constraint::Length(4), Constraint::Min(1)])
+                    .constraints([Constraint::Length(3), Constraint::Min(1)])
                     .split(area)
             } else {
                 Layout::default()
                     .constraints([
-                        Constraint::Length(4),
+                        Constraint::Length(3),
                         Constraint::Min(1),
                         Constraint::Min(1),
                     ])
