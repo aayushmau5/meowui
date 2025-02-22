@@ -4,7 +4,7 @@ mod new;
 mod show;
 
 use super::{AppActions, ScreenType};
-use crate::phoenix::event::PhoenixEvent;
+use crate::phoenix::event::{PhoenixEvent, StatusEvent};
 use chrono::{DateTime, Local};
 use cli_log::info;
 use crossterm::event::KeyEvent;
@@ -79,13 +79,16 @@ impl Screens {
 /// ### Get all bins
 /// screen -> socket: `{"name": "bin", "payload": {"action": "get-all"}}`
 ///
-/// socket -> screen: `{"name": "bin", "payload": {"action": "get-all", "data": [...]}}`
+/// screen <- socket: `{"name": "bin", "payload": {"action": "get-all", "data": [...]}}`
 ///
 /// ### Edit bin
 /// screen -> socket: `{"name": "bin", "payload": {"action": "edit", "data": {"id": 1, ...}}}`
 ///
+/// screen <- socket: `{"name": "bin", "payload": {"action": "edit", "data": {"id": 1, ...}}}`
+///
 /// ### Delete bin
 /// screen -> socket: `{"name": "bin", "payload": {"action": "delete", "id": 1}}`
+///
 pub struct BinScreen {
     pub screen_sender: Sender<PhoenixEvent>,
     current_screen: CurrentScreen,
@@ -115,9 +118,7 @@ impl BinScreen {
             Some(action) => match action {
                 BinActions::ChangeScreen(screen_type, data) => match screen_type {
                     CurrentScreen::Main => {
-                        self.current_screen = CurrentScreen::Main;
-                        self.screen = Screens::Main(MainScreen::new(Vec::new()));
-                        self.push_event(Some(json!({"action": "get-all"})));
+                        self.change_to_main_screen();
                         None
                     }
                     CurrentScreen::New => {
@@ -154,7 +155,6 @@ impl BinScreen {
             let data = payload["data"].clone();
             info!("{data:#?}");
             match action {
-                // TODO: optimization: get only title and expire_at field for bin list
                 "get-all" => {
                     let data: Result<Vec<Bin>, serde_json::Error> = serde_json::from_value(data);
                     if data.is_ok() {
@@ -165,15 +165,41 @@ impl BinScreen {
                     }
                 }
                 "new" => {
-                    let data: Result<Vec<Bin>, serde_json::Error> = serde_json::from_value(data);
+                    let data: Result<StatusEvent, serde_json::Error> = serde_json::from_value(data);
                     if data.is_ok() {
-                        if !matches!(self.current_screen, CurrentScreen::Main) {
-                            let mut main_screen = MainScreen::new(data.unwrap());
-                            main_screen.select_first();
-                            let main_screen = Screens::Main(main_screen);
-                            self.screen = main_screen;
-                            self.current_screen = CurrentScreen::Main;
+                        let data = data.unwrap();
+                        if data.status.as_str() == "OK" {
+                            // on successful creation of new bin
+                            // move to main screen
+                            if !matches!(self.current_screen, CurrentScreen::Main) {
+                                self.change_to_main_screen();
+                            }
+                        } else {
+                            info!("{}", data.message.unwrap());
                         }
+                    }
+                }
+                "delete" => {
+                    let data: Result<StatusEvent, serde_json::Error> = serde_json::from_value(data);
+                    if data.is_ok() {
+                        let data = data.unwrap();
+                        if data.status.as_str() == "OK" {
+                            // on successful deletion
+                            // move to main screen
+                            if !matches!(self.current_screen, CurrentScreen::Main) {
+                                self.change_to_main_screen();
+                            }
+                        } else {
+                            info!("{}", data.message.unwrap());
+                        }
+                    }
+                }
+                "edit" => {
+                    let data: Result<Bin, serde_json::Error> = serde_json::from_value(data);
+                    if data.is_ok() {
+                        let bin = data.unwrap();
+                        self.current_screen = CurrentScreen::Show;
+                        self.screen = Screens::Show(ShowScreen::new(bin));
                     }
                 }
                 e => info!("Unhandled action: {e}"),
@@ -189,5 +215,13 @@ impl BinScreen {
             Ok(()) => info!("sent message"),
             Err(e) => info!("{e}"),
         }
+    }
+
+    // Used frequently. Moved into a helper function.
+    /// Change to the main screen.
+    fn change_to_main_screen(&mut self) {
+        self.current_screen = CurrentScreen::Main;
+        self.screen = Screens::Main(MainScreen::new(Vec::new()));
+        self.push_event(Some(json!({"action": "get-all"})));
     }
 }

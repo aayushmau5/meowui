@@ -28,9 +28,16 @@ enum NewElements {
 impl NewScreen {
     pub fn new() -> Self {
         Self {
-            title_input: InputWidget::new(String::new(), Style::default(), Style::default()),
+            title_input: InputWidget::new(
+                String::new(),
+                Style::default(),
+                Style::default().fg(Color::Black).bg(Color::White),
+            ),
             content_input: MultilineInput::new(String::new()),
-            expire_at: ExpireAtWidget::new(Style::default(), Style::default()),
+            expire_at: ExpireAtWidget::new(
+                Style::default(),
+                Style::default().fg(Color::Black).bg(Color::White),
+            ),
             focused_element: NewElements::Title,
         }
     }
@@ -58,7 +65,8 @@ impl NewScreen {
                 let event = Some(json!({
                     "action": "new",
                     "data": {
-                        "title": title, "content": content,
+                        "title": title,
+                        "content": content,
                         "expire": {"time": expire_at.time, "unit": expire_at.unit.to_string()}
                     }
                 }));
@@ -138,7 +146,7 @@ impl NewScreen {
             .borders(Borders::ALL)
             .border_style(expire_at_style)
             .style(Style::new().green())
-            .title("Extend expire time");
+            .title("Expire in");
         let expire_at_widget = self.expire_at.clone().block(expire_at_block);
         f.render_widget(&expire_at_widget, chunks[2]);
     }

@@ -43,3 +43,9 @@ impl From<Payload> for PhoenixEvent {
         }
     }
 }
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct StatusEvent {
+    pub status: String,
+    pub message: Option<String>,
+}

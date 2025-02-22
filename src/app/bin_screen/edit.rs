@@ -23,6 +23,7 @@ pub struct EditScreen {
     focused_element: EditElements,
 }
 
+#[derive(serde::Serialize)]
 struct EditFiles {
     file: File,
     removed: bool,
@@ -183,7 +184,7 @@ impl EditScreen {
             .borders(Borders::ALL)
             .border_style(expire_at_style)
             .style(Style::new().green())
-            .title("Expire in");
+            .title("Extend Expire time by");
         let expire_at_widget = self.expire_at.clone().block(expire_at_block);
         f.render_widget(&expire_at_widget, chunk);
     }
@@ -213,12 +214,6 @@ impl EditScreen {
             KeyCode::Char('s') if e.modifiers == KeyModifiers::CONTROL => {
                 let edited_title = self.title_input.content();
                 let edited_content = self.content_input.content();
-                let files: Vec<File> = self
-                    .files
-                    .iter()
-                    .filter(|f| !f.removed)
-                    .map(|f| f.file.clone())
-                    .collect();
                 let expire_at = self.expire_at.time();
 
                 Some(BinActions::SendEvent(Some(json!({
@@ -227,7 +222,7 @@ impl EditScreen {
                         "id": self.bin.id,
                         "title": edited_title,
                         "content": edited_content,
-                        "files": files,
+                        "files": self.files,
                         "expire": {"time": expire_at.time, "unit": expire_at.unit.to_string()}
                    }
                 }))))
