@@ -5,10 +5,15 @@ mod tui;
 use app::App;
 use phoenix::event::PhoenixEvent;
 use phoenix::Phoenix;
+use std::env;
 use tokio::sync::{mpsc, watch};
 use tui::TUI;
 
-const SOCKET_ENDPOINT: &str = "ws://localhost:4000/tui/websocket";
+const SOCKET_ENDPOINT: &str = if cfg!(debug_assertions) {
+    "ws://localhost:4000/tui/websocket"
+} else {
+    "wss://phoenix.aayushsahu.com/tui/websocket"
+};
 
 #[tokio::main]
 async fn main() {
@@ -19,7 +24,10 @@ async fn main() {
     let (screen_tx, screen_rx) = mpsc::channel::<PhoenixEvent>(100);
     let (signal_close_tx, mut signal_close_rx) = watch::channel(false);
 
-    let mut phoenix = Phoenix::new(SOCKET_ENDPOINT, socket_tx, screen_rx);
+    let meowui_secret = env::var("MEOWUI_SECRET").unwrap();
+    let phoenix_endpoint = format!("{}?secret={}", SOCKET_ENDPOINT, meowui_secret);
+
+    let mut phoenix = Phoenix::new(phoenix_endpoint.as_str(), socket_tx, screen_rx);
     let phoenix_handle = tokio::spawn(async move {
         phoenix.setup().await;
 
