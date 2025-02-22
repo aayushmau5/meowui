@@ -5,13 +5,14 @@ edition = "2021"
 
 [dependencies]
 ratatui = "0.29.0"
-phoenix_channels_client = { git = "https://github.com/liveview-native/phoenix-channels-client.git"}
+phoenix_channels_client = { git = "https://github.com/liveview-native/phoenix-channels-client.git", features = [
+    "native-tls",
+] }
 crossterm = "0.28.1"
-color-eyre = "0.6"
 url = "2.5.4"
-tokio = {version = "1.43.0", features = ["full"]}
+tokio = { version = "1.43.0", features = ["full"] }
 cli-log = "=2.1.0"
-serde = {version = "1.0.217", features = ["derive"]}
+serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.138"
-chrono = {version = "0.4.39", features = ["serde"]}
+chrono = { version = "0.4.39", features = ["serde"] }
 open = "5.3.2"
