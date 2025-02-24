@@ -1,8 +1,12 @@
 # meowui
 
-TUI
+A TUI that's connected to [my phoenix backend](https://github.com/aayushmau5/phoenix.aayushsahu.com) and is used as a personal utility(for works such as bin management, project management, etc.)
 
-https://github.com/ratatui/awesome-ratatui
-https://github.com/rhysd/tui-textarea
+![Video Demo](demo.mp4)
 
-https://hexdocs.pm/phoenix/Phoenix.Token.html
+## Tools
+
+- Rust
+- The awesome Ratatui project
+- [Phoenix channels client](https://github.com/liveview-native/phoenix-channels-client) by LiveView Native team
+
