@@ -2,7 +2,7 @@
 
 A TUI that's connected to [my phoenix backend](https://github.com/aayushmau5/phoenix.aayushsahu.com) and is used as a personal utility(for works such as bin management, project management, etc.)
 
-![Video Demo](https://raw.githubusercontent.com/aayushmau5/meowui/refs/heads/main/demo.mp4)
+https://github.com/user-attachments/assets/9a4b7693-d714-413d-8dd9-8de3fec85f93
 
 ## Tools
 
