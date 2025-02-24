@@ -106,7 +106,7 @@ impl MainScreen {
 
         let list = List::new(items)
             .block(block)
-            .highlight_style(Style::new().bg(Color::Green))
+            .highlight_style(Style::new().reversed())
             .style(Style::new().green())
             .highlight_symbol("-> ")
             .repeat_highlight_symbol(false);
