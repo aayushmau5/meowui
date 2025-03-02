@@ -10,7 +10,11 @@ use ratatui::{
 };
 use serde_json::json;
 
-const ENDPOINT: &str = "http://localhost:4000";
+const ENDPOINT: &str = if cfg!(debug_assertions) {
+    "http://localhost:4000"
+} else {
+    "https://phoenix.aayushsahu.com"
+};
 
 pub struct ShowScreen {
     bin: Bin,
