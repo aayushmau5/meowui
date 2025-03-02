@@ -1,5 +1,6 @@
 mod app;
 mod phoenix;
+mod sqlite;
 mod tui;
 
 use app::App;

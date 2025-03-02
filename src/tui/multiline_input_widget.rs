@@ -12,6 +12,7 @@ pub struct MultilineInput<'a> {
     block: Option<Block<'a>>,
 }
 
+// TODO: add scroll for large input
 impl<'a> MultilineInput<'a> {
     pub fn new(content: String) -> Self {
         let lines = if content.is_empty() {
