@@ -4,7 +4,7 @@ use cli_log::info;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     style::{Color, Style, Stylize},
-    widgets::{Block, BorderType, Borders},
+    widgets::{Block, BorderType, Borders, Paragraph},
     Frame,
 };
 use serde_json::json;
@@ -35,7 +35,7 @@ impl NotesScreen {
             .border_style(Style::default().fg(Color::Green))
             .style(Style::new().green())
             .title("Notes");
-        f.render_widget(block, f.area());
+        f.render_widget(Paragraph::new("TODO").block(block), f.area());
     }
 
     pub fn handle_key(&mut self, e: KeyEvent) -> Option<AppActions> {
